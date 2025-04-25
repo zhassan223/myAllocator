@@ -27,6 +27,58 @@ void free_tensor(Tensor* t) {
         t->data = NULL;
     }
 }
+
+Arena tensor_arena={0};
+void init_arena(){
+if(tensor_arena.initialized ==0){
+    tensor_arena.memory= malloc(ARENA_SIZE);
+    if(tensor_arena.memory == 0){
+        printf("COULDNT allocate memory, you prob did sum wrong or check size lmfao \n");
+        exit(1);
+    }
+    tensor_arena.total_size=ARENA_SIZE;
+    tensor_arena.initialized=1;
+    tensor_arena.used=0;
+}
+}
+
+void reset_arena(){
+    tensor_arena.used =0;
+}
+
+void* arena_malloc(size_t size){
+    if(!tensor_arena.initialized){
+        init_arena();
+    }
+    //can experiment with 8 or 16 alignment ...currently it's 8 
+    size = (size + 7) & -7;
+
+    if (tensor_arena.used + size > tensor_arena.total_size) {
+        fprintf(stderr, "Arena out of memory\n");
+        return NULL;
+    }
+    
+    void* ptr = (char*)tensor_arena.memory + tensor_arena.used;
+    tensor_arena.used += size;
+    
+    return ptr;
+
+}
+
+void delete_arena(){
+    if(tensor_arena.initialized){
+        free(tensor_arena.memory);
+        tensor_arena.memory = NULL;//uaf mitigation
+        tensor_arena.initialized=0;
+        tensor_arena.used =0;
+    }
+}
+void free_arena_tensor(Tensor* t){
+    if(t) t->data = NULL;
+}
+
+
+
 void matmul(const Tensor* A, const Tensor* B, Tensor* out) {
     float* a = (float*)A->data;
     float* b = (float*)B->data;
@@ -82,9 +134,10 @@ void run_standard_allocator() {
 }
 
 void run_custom_allocator() {
-    Tensor input = {custom_malloc(sizeof(float)*BATCH_SIZE*INPUT_DIM), BATCH_SIZE, INPUT_DIM};
-    Tensor h1 = {custom_malloc(sizeof(float)*BATCH_SIZE*HIDDEN_DIM), BATCH_SIZE, HIDDEN_DIM};
-    Tensor output = {custom_malloc(sizeof(float)*BATCH_SIZE*OUTPUT_DIM), BATCH_SIZE, OUTPUT_DIM};
+    init_arena();
+    Tensor input = {arena_malloc(sizeof(float)*BATCH_SIZE*INPUT_DIM), BATCH_SIZE, INPUT_DIM};
+    Tensor h1 = {arena_malloc(sizeof(float)*BATCH_SIZE*HIDDEN_DIM), BATCH_SIZE, HIDDEN_DIM};
+    Tensor output = {arena_malloc(sizeof(float)*BATCH_SIZE*OUTPUT_DIM), BATCH_SIZE, OUTPUT_DIM};
     
     for (int i = 0; i < BATCH_SIZE*INPUT_DIM; i++) {
         ((float*)input.data)[i] = -5.0f + ((float)rand() / (float)RAND_MAX) * 10.0f;
@@ -96,9 +149,12 @@ void run_custom_allocator() {
     matmul(&h1, &W2, &output);
     add_bias(&output, b2_data);
     
-    free_tensor(&input);
-    free_tensor(&h1);
-    free_tensor(&output);
+    free_arena_tensor(&input);
+    free_arena_tensor(&h1);
+    free_arena_tensor(&output);
+    delete_arena();
+
+
 }
 
 int main(int argc, char *argv[]) {
