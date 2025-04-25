@@ -116,6 +116,9 @@ void relu(Tensor* t) {
 void run_standard_allocator() {
     Tensor input = {malloc(sizeof(float)*BATCH_SIZE*INPUT_DIM), BATCH_SIZE, INPUT_DIM};
     Tensor h1 = {malloc(sizeof(float)*BATCH_SIZE*HIDDEN_DIM), BATCH_SIZE, HIDDEN_DIM};
+    Tensor h2 = {malloc(sizeof(float)*BATCH_SIZE*HIDDEN_DIM), BATCH_SIZE, HIDDEN_DIM};
+    Tensor h3 = {malloc(sizeof(float)*BATCH_SIZE*HIDDEN_DIM), BATCH_SIZE, HIDDEN_DIM};
+    Tensor h4 = {malloc(sizeof(float)*BATCH_SIZE*HIDDEN_DIM), BATCH_SIZE, HIDDEN_DIM};
     Tensor output = {malloc(sizeof(float)*BATCH_SIZE*OUTPUT_DIM), BATCH_SIZE, OUTPUT_DIM};
     
     for (int i = 0; i < BATCH_SIZE*INPUT_DIM; i++) {
@@ -125,36 +128,74 @@ void run_standard_allocator() {
     matmul(&input, &W1, &h1);
     add_bias(&h1, b1_data);
     relu(&h1);
-    matmul(&h1, &W2, &output);
+    
+    matmul(&h1, &W1, &h2);
+    add_bias(&h2, b1_data);
+    relu(&h2);
+    
+    matmul(&h2, &W1, &h3);
+    add_bias(&h3, b1_data);
+    relu(&h3);
+    
+    matmul(&h3, &W1, &h4);
+    add_bias(&h4, b1_data);
+    relu(&h4);
+    
+    matmul(&h4, &W2, &output);
     add_bias(&output, b2_data);
     
     free_tensor(&input);
     free_tensor(&h1);
+    free_tensor(&h2);
+    free_tensor(&h3);
+    free_tensor(&h4);
     free_tensor(&output);
 }
 
 void run_custom_allocator() {
-    init_arena();
+    // Reset arena for each run
+    reset_arena();
+    
     Tensor input = {arena_malloc(sizeof(float)*BATCH_SIZE*INPUT_DIM), BATCH_SIZE, INPUT_DIM};
     Tensor h1 = {arena_malloc(sizeof(float)*BATCH_SIZE*HIDDEN_DIM), BATCH_SIZE, HIDDEN_DIM};
+    Tensor h2 = {arena_malloc(sizeof(float)*BATCH_SIZE*HIDDEN_DIM), BATCH_SIZE, HIDDEN_DIM};
+    Tensor h3 = {arena_malloc(sizeof(float)*BATCH_SIZE*HIDDEN_DIM), BATCH_SIZE, HIDDEN_DIM};
+    Tensor h4 = {arena_malloc(sizeof(float)*BATCH_SIZE*HIDDEN_DIM), BATCH_SIZE, HIDDEN_DIM};
     Tensor output = {arena_malloc(sizeof(float)*BATCH_SIZE*OUTPUT_DIM), BATCH_SIZE, OUTPUT_DIM};
     
+    // Initialize input with random data
     for (int i = 0; i < BATCH_SIZE*INPUT_DIM; i++) {
         ((float*)input.data)[i] = -5.0f + ((float)rand() / (float)RAND_MAX) * 10.0f;
     }
     
+    // First layer
     matmul(&input, &W1, &h1);
     add_bias(&h1, b1_data);
     relu(&h1);
-    matmul(&h1, &W2, &output);
+    
+    // Additional hidden layers (reusing the same weights)
+    matmul(&h1, &W1, &h2);
+    add_bias(&h2, b1_data);
+    relu(&h2);
+    
+    matmul(&h2, &W1, &h3);
+    add_bias(&h3, b1_data);
+    relu(&h3);
+    
+    matmul(&h3, &W1, &h4);
+    add_bias(&h4, b1_data);
+    relu(&h4);
+    
+    matmul(&h4, &W2, &output);
     add_bias(&output, b2_data);
     
+   
     free_arena_tensor(&input);
     free_arena_tensor(&h1);
+    free_arena_tensor(&h2);
+    free_arena_tensor(&h3);
+    free_arena_tensor(&h4);
     free_arena_tensor(&output);
-    delete_arena();
-
-
 }
 
 int main(int argc, char *argv[]) {
