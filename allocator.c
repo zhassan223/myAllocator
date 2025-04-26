@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
 
 
 
-
+        //shoutout shd for this!
         int* cache_clear = (int*)malloc(32 * 1024 * 1024);
         if (cache_clear) {
             for (int j = 0; j < 8 * 1024 * 1024; j++) {
