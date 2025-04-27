@@ -27,12 +27,9 @@ Tensor W2;
 struct memory_pool* tensor_pool = NULL;
 
 void init_pool_system() {
-    // Calculate the maximum tensor size we'll need
     size_t max_size = sizeof(float) * BATCH_SIZE * 
                      (INPUT_DIM > HIDDEN_DIM ? INPUT_DIM : HIDDEN_DIM);
-    
-    // Create a pool with enough space for several tensors
-    // We'll allocate 10 blocks of max tensor size
+
     tensor_pool = pool_create(max_size, 10);
     if (!tensor_pool) {
         printf("Failed to create memory pool!\n");
