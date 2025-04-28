@@ -28,6 +28,16 @@ void free_tensor(Tensor* t) {
     }
 }
 
+void clear_cpu_cache() {
+    int* cache_clear = (int*)malloc(32 * 1024 * 1024);
+    if (cache_clear) {
+        for (int j = 0; j < 8 * 1024 * 1024; j++) {
+            cache_clear[j] = j;
+        }
+        free(cache_clear);
+    }
+}
+
 Arena tensor_arena={0};
 void init_arena(){
 if(tensor_arena.initialized ==0){
@@ -153,7 +163,6 @@ void run_standard_allocator() {
 }
 
 void run_custom_allocator() {
-    // Reset arena for each run
     reset_arena();
     
     Tensor input = {arena_malloc(sizeof(float)*BATCH_SIZE*INPUT_DIM), BATCH_SIZE, INPUT_DIM};
@@ -163,17 +172,14 @@ void run_custom_allocator() {
     Tensor h4 = {arena_malloc(sizeof(float)*BATCH_SIZE*HIDDEN_DIM), BATCH_SIZE, HIDDEN_DIM};
     Tensor output = {arena_malloc(sizeof(float)*BATCH_SIZE*OUTPUT_DIM), BATCH_SIZE, OUTPUT_DIM};
     
-    // Initialize input with random data
     for (int i = 0; i < BATCH_SIZE*INPUT_DIM; i++) {
         ((float*)input.data)[i] = -5.0f + ((float)rand() / (float)RAND_MAX) * 10.0f;
     }
     
-    // First layer
     matmul(&input, &W1, &h1);
     add_bias(&h1, b1_data);
     relu(&h1);
     
-    // Additional hidden layers (reusing the same weights)
     matmul(&h1, &W1, &h2);
     add_bias(&h2, b1_data);
     relu(&h2);
@@ -233,13 +239,7 @@ int main(int argc, char *argv[]) {
 
 
         //shoutout shd for this!
-        int* cache_clear = (int*)malloc(32 * 1024 * 1024);
-        if (cache_clear) {
-            for (int j = 0; j < 8 * 1024 * 1024; j++) {
-                cache_clear[j] = j; 
-            }
-            free(cache_clear);
-        }
+        clear_cpu_cache();
 
 
 
@@ -255,13 +255,7 @@ int main(int argc, char *argv[]) {
 
 
         //lol gotta clear the cache cuz I saw that the second pass will always be faster 
-        cache_clear = (int*)malloc(32 * 1024 * 1024);
-        if (cache_clear) {
-            for (int j = 0; j < 8 * 1024 * 1024; j++) {
-                cache_clear[j] = j;
-            }
-            free(cache_clear);
-        }
+        clear_cpu_cache();
 
 
 
